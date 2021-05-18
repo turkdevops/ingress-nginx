@@ -224,6 +224,10 @@ func (n *NGINXController) CheckIngress(ing *networking.Ingress) error {
 		return nil
 	}
 
+	if n.cfg.DisableCatchAll && ing.Spec.Backend != nil {
+		return fmt.Errorf("This deployment is trying to create a catch-all ingress while DisableCatchAll flag is set to true. Remove '.spec.backend' or set DisableCatchAll flag to false.")
+	}
+
 	if parser.AnnotationsPrefix != parser.DefaultAnnotationsPrefix {
 		for key := range ing.ObjectMeta.GetAnnotations() {
 			if strings.HasPrefix(key, fmt.Sprintf("%s/", parser.DefaultAnnotationsPrefix)) {
@@ -1365,6 +1369,11 @@ func mergeAlternativeBackends(ing *ingress.Ingress, upstreams map[string]*ingres
 	}
 
 	for _, rule := range ing.Spec.Rules {
+		host := rule.Host
+		if host == "" {
+			host = defServerName
+		}
+
 		for _, path := range rule.HTTP.Paths {
 			upsName := upstreamName(ing.Namespace, path.Backend.ServiceName, path.Backend.ServicePort)
 
@@ -1378,11 +1387,11 @@ func mergeAlternativeBackends(ing *ingress.Ingress, upstreams map[string]*ingres
 			merged := false
 			altEqualsPri := false
 
-			server, ok := servers[rule.Host]
+			server, ok := servers[host]
 			if !ok {
 				klog.Errorf("cannot merge alternative backend %s into hostname %s that does not exist",
 					altUps.Name,
-					rule.Host)
+					host)
 
 				continue
 			}

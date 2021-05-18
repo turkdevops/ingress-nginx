@@ -84,6 +84,7 @@ http {
           error("require failed: " .. tostring(res))
         else
           configuration = res
+          configuration.prohibited_localhost_port = '{{ .StatusPort }}'
         end
 
         ok, res = pcall(require, "balancer")
@@ -713,6 +714,8 @@ stream {
           error("require failed: " .. tostring(res))
         else
           tcp_udp_configuration = res
+          tcp_udp_configuration.prohibited_localhost_port = '{{ .StatusPort }}'
+
         end
 
         ok, res = pcall(require, "tcp_udp_balancer")
@@ -1250,6 +1253,7 @@ stream {
             {{ $proxySetHeader }} X-Forwarded-Host       $best_http_host;
             {{ $proxySetHeader }} X-Forwarded-Port       $pass_port;
             {{ $proxySetHeader }} X-Forwarded-Proto      $pass_access_scheme;
+            {{ $proxySetHeader }} X-Forwarded-Scheme     $pass_access_scheme;
             {{ if $all.Cfg.ProxyAddOriginalURIHeader }}
             {{ $proxySetHeader }} X-Original-URI         $request_uri;
             {{ end }}
